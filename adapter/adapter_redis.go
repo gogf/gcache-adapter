@@ -34,12 +34,12 @@ func NewRedis(redis *gredis.Redis) gcache.Adapter {
 func (c *Redis) Set(key interface{}, value interface{}, duration time.Duration) {
 	var err error
 	if value == nil || duration < 0 {
-		_, err = c.redis.Do("DEL", key)
+		_, err = c.redis.DoVar("DEL", key)
 	} else {
 		if duration == 0 {
-			_, err = c.redis.Do("SET", key, value)
+			_, err = c.redis.DoVar("SET", key, value)
 		} else {
-			_, err = c.redis.Do("SETEX", key, duration.Seconds(), value)
+			_, err = c.redis.DoVar("SETEX", key, duration.Seconds(), value)
 		}
 	}
 	if err != nil {
@@ -78,7 +78,7 @@ func (c *Redis) Update(key interface{}, value interface{}) (oldValue interface{}
 	oldValue = v.Val()
 	// DEL.
 	if value == nil {
-		_, err = c.redis.Do("DEL", key)
+		_, err = c.redis.DoVar("DEL", key)
 		if err != nil {
 			g.Log().Error(err)
 			return
@@ -87,13 +87,13 @@ func (c *Redis) Update(key interface{}, value interface{}) (oldValue interface{}
 	}
 	// Update the value.
 	if oldDuration == -1 {
-		_, err = c.redis.Do("SET", key, value)
+		_, err = c.redis.DoVar("SET", key, value)
 		if err != nil {
 			g.Log().Error(err)
 		}
 	} else {
 		oldDuration *= time.Second
-		_, err = c.redis.Do("SETEX", key, oldDuration.Seconds(), value)
+		_, err = c.redis.DoVar("SETEX", key, oldDuration.Seconds(), value)
 		if err != nil {
 			g.Log().Error(err)
 		}
@@ -125,12 +125,12 @@ func (c *Redis) UpdateExpire(key interface{}, duration time.Duration) (oldDurati
 	oldDuration *= time.Second
 	// DEL.
 	if duration < 0 {
-		_, err = c.redis.Do("DEL", key)
+		_, err = c.redis.DoVar("DEL", key)
 		return
 	}
 	// Update the expire.
 	if duration > 0 {
-		_, err = c.redis.Do("EXPIRE", key, duration.Seconds())
+		_, err = c.redis.DoVar("EXPIRE", key, duration.Seconds())
 		if err != nil {
 			g.Log().Error(err)
 		}
@@ -142,7 +142,7 @@ func (c *Redis) UpdateExpire(key interface{}, duration time.Duration) (oldDurati
 			g.Log().Error(err)
 			return
 		}
-		_, err = c.redis.Do("SET", key, v.Val())
+		_, err = c.redis.DoVar("SET", key, v.Val())
 		if err != nil {
 			g.Log().Error(err)
 		}
@@ -206,7 +206,7 @@ func (c *Redis) SetIfNotExist(key interface{}, value interface{}, duration time.
 	}
 	if v.Int() > 0 {
 		// Set the expire.
-		_, err := c.redis.Do("TTL", key, duration.Seconds())
+		_, err := c.redis.DoVar("TTL", key, duration.Seconds())
 		if err != nil {
 			g.Log().Error(err)
 			return false
@@ -233,7 +233,7 @@ func (c *Redis) Sets(data map[interface{}]interface{}, duration time.Duration) {
 			keys[index] = k
 			index += 1
 		}
-		_, err := c.redis.Do("DEL", keys...)
+		_, err := c.redis.DoVar("DEL", keys...)
 		if err != nil {
 			g.Log().Error(err)
 			return
@@ -249,7 +249,7 @@ func (c *Redis) Sets(data map[interface{}]interface{}, duration time.Duration) {
 			keyValues[index+1] = v
 			index += 2
 		}
-		_, err := c.redis.Do("MSET", keyValues...)
+		_, err := c.redis.DoVar("MSET", keyValues...)
 		if err != nil {
 			g.Log().Error(err)
 			return
@@ -336,7 +336,7 @@ func (c *Redis) Remove(keys ...interface{}) (value interface{}) {
 	}
 	value = v.Val()
 	// Deletes all given keys.
-	_, err = c.redis.Do("DEL", keys...)
+	_, err = c.redis.DoVar("DEL", keys...)
 	if err != nil {
 		g.Log().Error(err)
 		return
@@ -405,7 +405,7 @@ func (c *Redis) Size() (size int) {
 // Note that this function is sensitive and should be carefully used.
 func (c *Redis) Clear() error {
 	// The "FLUSHDB" may not be available.
-	if _, err := c.redis.Do("FLUSHDB"); err != nil {
+	if _, err := c.redis.DoVar("FLUSHDB"); err != nil {
 		c.Remove(c.Keys()...)
 	}
 	return nil
