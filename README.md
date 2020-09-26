@@ -4,8 +4,11 @@ Adapters for package gcache.
 ## Requirements
 
 ```shell script
-gf version >= v1.14.0
+gf version >= v1.14.0 
 ```
+> Or using the `master` branch.
+
+
 
 ## Installation
 
