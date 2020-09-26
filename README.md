@@ -26,7 +26,7 @@ adapter := adapter.NewRedis(g.Redis())
 cache.SetAdapter(adapter)
 ```
 
-### Database Cache
+### Change Database Cache From In-Memory To Redis
 ```go
 adapter := adapter.NewRedis(g.Redis())
 g.DB().GetCache().SetAdapter(adapter)
