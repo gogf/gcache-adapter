@@ -1,6 +1,18 @@
 # gcache-adapter
 Adapters for package gcache.
 
+## Requirements
+
+```shell script
+gf version >= v1.14.0
+```
+
+## Installation
+
+```shell script
+go get -u github.com/gogf/gcache-adapter
+```
+
 ## Usage
 
 ### Normal Cache
