@@ -35,12 +35,14 @@ func Test_Basic1(t *testing.T) {
 			cacheRedis.Set(i, i*10, 0)
 		}
 		for i := 0; i < size; i++ {
-			t.Assert(cacheRedis.Get(i), i*10)
+			v, _ := cacheRedis.Get(i)
+			t.Assert(v, i*10)
 		}
-		t.Assert(cacheRedis.Size(), size)
+		n, _ := cacheRedis.Size()
+		t.Assert(n, size)
 	})
 	gtest.C(t, func(t *gtest.T) {
-		data := cacheRedis.Data()
+		data, _ := cacheRedis.Data()
 		t.Assert(len(data), size)
 		t.Assert(data["0"], "0")
 		t.Assert(data["1"], "10")
@@ -48,7 +50,8 @@ func Test_Basic1(t *testing.T) {
 	})
 	gtest.C(t, func(t *gtest.T) {
 		cacheRedis.Clear()
-		t.Assert(cacheRedis.Size(), 0)
+		n, _ := cacheRedis.Size()
+		t.Assert(n, 0)
 	})
 }
 
@@ -60,9 +63,11 @@ func Test_Basic2(t *testing.T) {
 			cacheRedis.Set(i, i*10, -1)
 		}
 		for i := 0; i < size; i++ {
-			t.Assert(cacheRedis.Get(i), nil)
+			v, _ := cacheRedis.Get(i)
+			t.Assert(v, nil)
 		}
-		t.Assert(cacheRedis.Size(), 0)
+		n, _ := cacheRedis.Size()
+		t.Assert(n, 0)
 	})
 }
 
@@ -74,16 +79,20 @@ func Test_Basic3(t *testing.T) {
 			cacheRedis.Set(i, i*10, time.Second)
 		}
 		for i := 0; i < size; i++ {
-			t.Assert(cacheRedis.Get(i), i*10)
+			v, _ := cacheRedis.Get(i)
+			t.Assert(v, i*10)
 		}
-		t.Assert(cacheRedis.Size(), size)
+		n, _ := cacheRedis.Size()
+		t.Assert(n, size)
 	})
 	time.Sleep(time.Second * 2)
 	gtest.C(t, func(t *gtest.T) {
 		for i := 0; i < size; i++ {
-			t.Assert(cacheRedis.Get(i), nil)
+			v, _ := cacheRedis.Get(i)
+			t.Assert(v, nil)
 		}
-		t.Assert(cacheRedis.Size(), 0)
+		n, _ := cacheRedis.Size()
+		t.Assert(n, 0)
 	})
 }
 
@@ -96,16 +105,20 @@ func TestRedis_Update(t *testing.T) {
 			value2 = "value2"
 		)
 		cacheRedis.Set(key, value1, time.Second)
-		t.Assert(cacheRedis.Get(key), value1)
+		v, _ := cacheRedis.Get(key)
+		t.Assert(v, value1)
 
-		t.Assert(cacheRedis.GetExpire(key) > time.Millisecond*500, true)
-		t.Assert(cacheRedis.GetExpire(key) <= time.Second, true)
+		d, _ := cacheRedis.GetExpire(key)
+		t.Assert(d > time.Millisecond*500, true)
+		t.Assert(d <= time.Second, true)
 
 		cacheRedis.Update(key, value2)
 
-		t.Assert(cacheRedis.Get(key), value2)
-		t.Assert(cacheRedis.GetExpire(key) > time.Millisecond*500, true)
-		t.Assert(cacheRedis.GetExpire(key) <= time.Second, true)
+		v, _ = cacheRedis.Get(key)
+		t.Assert(v, value2)
+		d, _ = cacheRedis.GetExpire(key)
+		t.Assert(d > time.Millisecond*500, true)
+		t.Assert(d <= time.Second, true)
 	})
 }
 
@@ -117,15 +130,18 @@ func TestRedis_UpdateExpire(t *testing.T) {
 			value = "value"
 		)
 		cacheRedis.Set(key, value, time.Second)
-		t.Assert(cacheRedis.Get(key), value)
+		v, _ := cacheRedis.Get(key)
+		t.Assert(v, value)
 
-		t.Assert(cacheRedis.GetExpire(key) > time.Millisecond*500, true)
-		t.Assert(cacheRedis.GetExpire(key) <= time.Second, true)
+		d, _ := cacheRedis.GetExpire(key)
+		t.Assert(d > time.Millisecond*500, true)
+		t.Assert(d <= time.Second, true)
 
 		cacheRedis.UpdateExpire(key, time.Second*2)
 
-		t.Assert(cacheRedis.GetExpire(key) > time.Second, true)
-		t.Assert(cacheRedis.GetExpire(key) <= 2*time.Second, true)
+		d, _ = cacheRedis.GetExpire(key)
+		t.Assert(d > time.Second, true)
+		t.Assert(d <= 2*time.Second, true)
 	})
 }
 
@@ -138,13 +154,18 @@ func TestRedis_SetIfNotExist(t *testing.T) {
 			value2 = "value2"
 		)
 		cacheRedis.Set(key, value1, time.Second)
-		t.Assert(cacheRedis.Get(key), value1)
+		v, _ := cacheRedis.Get(key)
+		t.Assert(v, value1)
 
-		r := cacheRedis.SetIfNotExist(key, value2, time.Second*2)
+		r, _ := cacheRedis.SetIfNotExist(key, value2, time.Second*2)
 
 		t.Assert(r, false)
-		t.Assert(cacheRedis.Get(key), value1)
-		t.Assert(cacheRedis.GetExpire(key) > time.Millisecond*500, true)
-		t.Assert(cacheRedis.GetExpire(key) <= time.Second, true)
+
+		v, _ = cacheRedis.Get(key)
+		t.Assert(v, value1)
+
+		d, _ := cacheRedis.GetExpire(key)
+		t.Assert(d > time.Millisecond*500, true)
+		t.Assert(d <= time.Second, true)
 	})
 }
