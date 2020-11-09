@@ -181,7 +181,7 @@ func (c *Redis) SetIfNotExist(key interface{}, value interface{}, duration time.
 	}
 	if v.Int() > 0 {
 		// Set the expire.
-		_, err := c.redis.Do("TTL", key, duration.Seconds())
+		_, err := c.redis.Do("EXPIRE", key, duration.Seconds())
 		if err != nil {
 			return false, err
 		}
