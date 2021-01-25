@@ -18,6 +18,11 @@ go get -u github.com/gogf/gcache-adapter
 
 ## Usage
 
+### Import
+```go
+import "github.com/gogf/gcache-adapter/adapter"
+```
+
 ### Normal Cache
 
 ```go
