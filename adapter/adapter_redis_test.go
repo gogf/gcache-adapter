@@ -17,7 +17,7 @@ import (
 
 var (
 	cacheRedis  = gcache.New()
-	redisConfig = gredis.Config{
+	redisConfig = &gredis.Config{
 		Host: "127.0.0.1",
 		Port: 6379,
 		Db:   1,
