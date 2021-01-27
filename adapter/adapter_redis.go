@@ -180,7 +180,7 @@ func (c *Redis) SetIfNotExist(ctx context.Context, key interface{}, value interf
 	if err != nil {
 		return false, err
 	}
-	if v.Int() > 0 {
+	if v.Int() > 0 && duration > 0 {
 		// Set the expire.
 		_, err := c.redis.Ctx(ctx).Do("EXPIRE", key, duration.Seconds())
 		if err != nil {
