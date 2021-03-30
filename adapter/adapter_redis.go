@@ -82,7 +82,7 @@ func (c *Redis) Update(ctx context.Context, key interface{}, value interface{}) 
 		_, err = c.redis.Ctx(ctx).DoVar("SET", key, value)
 	} else {
 		oldDuration *= time.Second
-		_, err = c.redis.Ctx(ctx).DoVar("SETEX", key, oldDuration.Seconds(), value)
+		_, err = c.redis.Ctx(ctx).DoVar("SETEX", key, uint64(oldDuration.Seconds()), value)
 	}
 	return oldValue, true, err
 }
@@ -114,7 +114,7 @@ func (c *Redis) UpdateExpire(ctx context.Context, key interface{}, duration time
 	}
 	// Update the expire.
 	if duration > 0 {
-		_, err = c.redis.Ctx(ctx).Do("EXPIRE", key, duration.Seconds())
+		_, err = c.redis.Ctx(ctx).Do("EXPIRE", key, uint64(duration.Seconds()))
 	}
 	// No expire.
 	if duration == 0 {
@@ -182,7 +182,7 @@ func (c *Redis) SetIfNotExist(ctx context.Context, key interface{}, value interf
 	}
 	if v.Int() > 0 && duration > 0 {
 		// Set the expire.
-		_, err := c.redis.Ctx(ctx).Do("EXPIRE", key, duration.Seconds())
+		_, err := c.redis.Ctx(ctx).Do("EXPIRE", key, uint64(duration.Seconds()))
 		if err != nil {
 			return false, err
 		}
