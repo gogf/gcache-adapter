@@ -37,7 +37,7 @@ func (c *Redis) Set(ctx context.Context, key interface{}, value interface{}, dur
 		if duration == 0 {
 			_, err = c.redis.Ctx(ctx).DoVar("SET", key, value)
 		} else {
-			_, err = c.redis.Ctx(ctx).DoVar("SETEX", key, duration.Seconds(), value)
+			_, err = c.redis.Ctx(ctx).DoVar("SETEX", key, uint64(duration.Seconds()), value)
 		}
 	}
 	return err
