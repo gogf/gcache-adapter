@@ -8,10 +8,11 @@ package adapter
 
 import (
 	"context"
+	"time"
+
 	"github.com/gogf/gf/container/gvar"
 	"github.com/gogf/gf/database/gredis"
 	"github.com/gogf/gf/os/gcache"
-	"time"
 )
 
 // Redis is the gcache adapter implements using Redis server.
@@ -19,7 +20,7 @@ type Redis struct {
 	redis *gredis.Redis
 }
 
-// newAdapterMemory creates and returns a new memory cache object.
+// NewRedis newAdapterMemory creates and returns a new memory cache object.
 func NewRedis(redis *gredis.Redis) gcache.Adapter {
 	return &Redis{
 		redis: redis,
@@ -48,7 +49,7 @@ func (c *Redis) Set(ctx context.Context, key interface{}, value interface{}, dur
 //
 // It deletes the <key> if given <value> is nil.
 // It does nothing if <key> does not exist in the cache.
-func (c *Redis) Update(ctx context.Context, key interface{}, value interface{}) (oldValue interface{}, exist bool, err error) {
+func (c *Redis) Update(ctx context.Context, key interface{}, value interface{}) (oldValue *gvar.Var, exist bool, err error) {
 	var (
 		v           *gvar.Var
 		oldDuration time.Duration
@@ -68,7 +69,7 @@ func (c *Redis) Update(ctx context.Context, key interface{}, value interface{}) 
 	if err != nil {
 		return
 	}
-	oldValue = v.Val()
+	oldValue = v
 	// DEL.
 	if value == nil {
 		_, err = c.redis.Ctx(ctx).DoVar("DEL", key)
@@ -191,6 +192,45 @@ func (c *Redis) SetIfNotExist(ctx context.Context, key interface{}, value interf
 	return false, err
 }
 
+// SetIfNotExistFunc sets `key` with result of function `f` and returns true
+// if `key` does not exist in the cache, or else it does nothing and returns false if `key` already exists.
+//
+// The parameter `value` can be type of `func() interface{}`, but it does nothing if its
+// result is nil.
+//
+// It does not expire if `duration` == 0.
+// It deletes the `key` if `duration` < 0 or given `value` is nil.
+func (c *Redis) SetIfNotExistFunc(ctx context.Context, key interface{}, f func() (interface{}, error), duration time.Duration) (ok bool, err error) {
+	v, err := c.Get(ctx, key)
+	if err != nil {
+		return false, err
+	}
+	if v == nil {
+		value, err := f()
+		if err != nil {
+			return false, err
+		}
+		if value == nil {
+			return false, nil
+		}
+		return true, c.Set(ctx, key, value, duration)
+	} else {
+		return false, nil
+	}
+}
+
+// SetIfNotExistFuncLock sets `key` with result of function `f` and returns true
+// if `key` does not exist in the cache, or else it does nothing and returns false if `key` already exists.
+//
+// It does not expire if `duration` == 0.
+// It deletes the `key` if `duration` < 0 or given `value` is nil.
+//
+// Note that it differs from function `SetIfNotExistFunc` is that the function `f` is executed within
+// writing mutex lock for concurrent safety purpose.
+func (c *Redis) SetIfNotExistFuncLock(ctx context.Context, key interface{}, f func() (interface{}, error), duration time.Duration) (ok bool, err error) {
+	return c.SetIfNotExistFunc(ctx, key, f, duration)
+}
+
 // Sets batch sets cache with key-value pairs by <data>, which is expired after <duration>.
 //
 // It does not expire if <duration> == 0.
@@ -242,12 +282,12 @@ func (c *Redis) Sets(ctx context.Context, data map[interface{}]interface{}, dura
 
 // Get retrieves and returns the associated value of given <key>.
 // It returns nil if it does not exist or its value is nil.
-func (c *Redis) Get(ctx context.Context, key interface{}) (interface{}, error) {
+func (c *Redis) Get(ctx context.Context, key interface{}) (*gvar.Var, error) {
 	v, err := c.redis.Ctx(ctx).DoVar("GET", key)
 	if err != nil {
 		return nil, err
 	}
-	return v.Val(), nil
+	return v, nil
 }
 
 // GetOrSet retrieves and returns the value of <key>, or sets <key>-<value> pair and
@@ -257,13 +297,13 @@ func (c *Redis) Get(ctx context.Context, key interface{}) (interface{}, error) {
 // It does not expire if <duration> == 0.
 // It deletes the <key> if <duration> < 0 or given <value> is nil, but it does nothing
 // if <value> is a function and the function result is nil.
-func (c *Redis) GetOrSet(ctx context.Context, key interface{}, value interface{}, duration time.Duration) (interface{}, error) {
+func (c *Redis) GetOrSet(ctx context.Context, key interface{}, value interface{}, duration time.Duration) (*gvar.Var, error) {
 	v, err := c.Get(ctx, key)
 	if err != nil {
 		return nil, err
 	}
 	if v == nil {
-		return value, c.Set(ctx, key, value, duration)
+		return gvar.New(value), c.Set(ctx, key, value, duration)
 	} else {
 		return v, nil
 	}
@@ -276,7 +316,7 @@ func (c *Redis) GetOrSet(ctx context.Context, key interface{}, value interface{}
 // It does not expire if <duration> == 0.
 // It deletes the <key> if <duration> < 0 or given <value> is nil, but it does nothing
 // if <value> is a function and the function result is nil.
-func (c *Redis) GetOrSetFunc(ctx context.Context, key interface{}, f func() (interface{}, error), duration time.Duration) (interface{}, error) {
+func (c *Redis) GetOrSetFunc(ctx context.Context, key interface{}, f func() (interface{}, error), duration time.Duration) (*gvar.Var, error) {
 	v, err := c.Get(ctx, key)
 	if err != nil {
 		return nil, err
@@ -289,7 +329,7 @@ func (c *Redis) GetOrSetFunc(ctx context.Context, key interface{}, f func() (int
 		if value == nil {
 			return nil, nil
 		}
-		return value, c.Set(ctx, key, value, duration)
+		return gvar.New(value), c.Set(ctx, key, value, duration)
 	} else {
 		return v, nil
 	}
@@ -304,7 +344,7 @@ func (c *Redis) GetOrSetFunc(ctx context.Context, key interface{}, f func() (int
 //
 // Note that the function <f> should be executed within writing mutex lock for concurrent
 // safety purpose.
-func (c *Redis) GetOrSetFuncLock(ctx context.Context, key interface{}, f func() (interface{}, error), duration time.Duration) (interface{}, error) {
+func (c *Redis) GetOrSetFuncLock(ctx context.Context, key interface{}, f func() (interface{}, error), duration time.Duration) (*gvar.Var, error) {
 	return c.GetOrSetFunc(ctx, key, f, duration)
 }
 
@@ -319,7 +359,7 @@ func (c *Redis) Contains(ctx context.Context, key interface{}) (bool, error) {
 
 // Remove deletes the one or more keys from cache, and returns its value.
 // If multiple keys are given, it returns the value of the deleted last item.
-func (c *Redis) Remove(ctx context.Context, keys ...interface{}) (value interface{}, err error) {
+func (c *Redis) Remove(ctx context.Context, keys ...interface{}) (value *gvar.Var, err error) {
 	if len(keys) == 0 {
 		return nil, nil
 	}
@@ -327,7 +367,7 @@ func (c *Redis) Remove(ctx context.Context, keys ...interface{}) (value interfac
 	if v, err := c.redis.Ctx(ctx).DoVar("GET", keys[len(keys)-1]); err != nil {
 		return nil, err
 	} else {
-		value = v.Val()
+		value = v
 	}
 	// Deletes all given keys.
 	_, err = c.redis.Ctx(ctx).DoVar("DEL", keys...)
